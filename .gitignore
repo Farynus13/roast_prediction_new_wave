@@ -6,3 +6,5 @@
 /model.keras
 /roastPredictionData.npy
 /model_checkpoint.tf
+/.venv
+/model
