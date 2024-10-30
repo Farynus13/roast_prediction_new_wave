@@ -8,7 +8,7 @@ By predicting the coffee roasting curve the model enables more precise control o
 
 ![Figure 1: Coffee Roasting Curve Prediction](/media/roast_prediction.gif)
 
-*In black dashed lines we can observe the model's output given as an input only first 3 minutes of the temperature curves along the burner changes.
+*In black dashed lines we can observe the model's output given as an input last n seconds of the temperature curves along the burner changes.
 We can see an almost perfect fit to the real roast curve's ET and BT. Thanks to the added Attention Mechanisms model focuses strongly on the changes made in the burner value, which is especially visible in the ET curve*
 
 ### Model Description
