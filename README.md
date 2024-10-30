@@ -6,7 +6,7 @@ This project aims to develop a neural network model for inline time-series predi
 By predicting the coffee roasting curve the model enables more precise control of burner output, targeting an optimal roast profile. Traditional methods for coffee roasting system modelling<sup>[[1]](https://doi.org/10.1016/j.rineng.2024.102575)</sup> fail to provide satisfactory results due to non-stationarity, non-linearity, and partial observability of the system dynamics (different coffees respond differently to the burner output, also temperature readings are only an approximation of the real state of the system). By utilizing data-driven approach, where we use historical data of coffee roasting to train the RNN model we can achieve higher accuracy in predicting the systems behaviour, thus allowing us to produce higher quality roast.
 
 
-![Figure 1: Coffee Roasting Curve Prediction](fig_19.png)
+![Figure 1: Coffee Roasting Curve Prediction](/media/roast_prediction.gif)
 
 *In black dashed lines we can observe the model's output given as an input only first 3 minutes of the temperature curves along the burner changes.
 We can see an almost perfect fit to the real roast curve's ET and BT. Thanks to the added Attention Mechanisms model focuses strongly on the changes made in the burner value, which is especially visible in the ET curve*
