@@ -12,15 +12,17 @@ By predicting the coffee roasting curve the model enables more precise control o
 We can see an almost perfect fit to the real roast curve's ET and BT. Thanks to the added Attention Mechanisms model focuses strongly on the changes made in the burner value, which is especially visible in the ET curve*
 
 ### Model Description
-Current version of model utilizes LSTM <sup>[[2]](https://doi.org/10.1162/neco.1997.9.8.1735)</sup> network with Masked Attention Mechanism <sup>[[3]](https://doi.org/10.48550/arXiv.1706.03762)</sup>running in the autoregressive mode. As an input model takes timeseries data consisting of two temperature curves (Bean Temperature - BT, and Environment Temperature - ET) along with timeseries of burner value accross the roasting process. During Inference Time, burner value is used as exogenous input which we can modulate in order to simulate system dynamics (response of temperature curves on the burner settings)
+Current version of model utilizes LSTM <sup>[[2]](https://doi.org/10.1162/neco.1997.9.8.1735)</sup> network with Masked Attention Mechanism<sup>[[3]](https://doi.org/10.48550/arXiv.1706.03762)</sup> running in the autoregressive mode. As an input model takes timeseries data consisting of two temperature curves (Bean Temperature - BT, and Environment Temperature - ET) along with timeseries of burner value accross the roasting process. During Inference Time, burner value is used as exogenous input which we can modulate in order to simulate system dynamics (response of temperature curves on the burner settings)
 
 
 ### Objectives
 Accurate Prediction of Roasting Curve
+
 Generate a reliable prediction of the coffee roasting curve to anticipate the roast progression.
 
 ### Future Steps
 Burner Control Model: Implement a model that utilizes the curve prediction to adjust burner output and achieve specified roast goals.
+
 Refinement of Prediction Model: Fine-tune the model's predictive capabilities with additional roasting data for improved accuracy and adaptability to different machines.
 
 ---
