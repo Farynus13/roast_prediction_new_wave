@@ -195,7 +195,7 @@ def test_variable_length_predictions(model, scaler, data, max_length, min_idx=60
         test_predictions = np.array(test_predictions)
 
         # Call plotting function
-        plot_prediction(test_predictions, scaler, test_roast, start_point, 0, pred_length, j, show_plot)
+        plot_prediction(test_predictions, scaler, test_roast, start_point, 0, pred_length, chunk+chunks*j, show_plot)
         mse.append(calculate_mse(test_predictions,test_roast,scaler,start_point))
 
     print(f'MSE: {np.mean(mse)}')
@@ -251,7 +251,7 @@ def plot_prediction(test_predictions,scaler,test_roast,offset,input_sequence_len
         test_predictions = scaler.inverse_transform(test_predictions)
         forecast_index = np.arange(offset+input_sequence_length-1,pred_length+offset+input_sequence_length)
 
-        forecast_df =  pd.DataFrame(test_predictions[:,:2],columns=['bt','et'],index=(forecast_index-75)/60)
+        forecast_df =  pd.DataFrame(test_predictions[:,:2],columns=['bt forecast','et forecast'],index=(forecast_index-75)/60)
 
         # Create a subplot layout with 2 rows and 1 column
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 12), sharex=True)
@@ -262,20 +262,16 @@ def plot_prediction(test_predictions,scaler,test_roast,offset,input_sequence_len
         plot_roast.index = (plot_roast.index-75)/60
         plot_roast.plot(ax=ax1,color=['blue','red'])
         ax1.set_title('BT and ET')
-        ax1.set_xlabel('Index')
-        ax1.set_ylabel('Values')
+        ax1.set_xlabel('Time [Min]')
+        ax1.set_ylabel('Temp [C]')
         forecast_df.plot(ax=ax1,color=['black','black'],style='--')
         ax1.set_title('BT and ET with Forecast')
-        #mark points where br is close to 160 and call it 'yellowing'
-        ax1.axhline(y=160, color='y', label='Yellowing')
-        ax1.axhline(y=198, color='purple', label='FC')
-        ax1.axhline(y=211, color='black', label='DROP')
 
         # Plot the burner data on the second subplot
         ax2.plot((test_roast.index-75)/60, test_roast['burner'], label='Burner', color='orange')
         ax2.set_title('Burner Data')
-        ax2.set_xlabel('Index')
-        ax2.set_ylabel('Burner')
+        ax2.set_xlabel('Time [Min]')
+        ax2.set_ylabel('Burner [%]')
 
         #limit x to 13 min
         ax1.set_xlim(-2,13)
@@ -283,6 +279,9 @@ def plot_prediction(test_predictions,scaler,test_roast,offset,input_sequence_len
         # Show legends
         ax1.legend()
         ax2.legend()
+        #fix legends in bottom left
+        ax1.legend(loc='lower left')
+        ax2.legend(loc='lower left')
         #change to black theme
 
         # Display the plots
