@@ -8,3 +8,6 @@
 /model_checkpoint.tf
 /.venv
 /model
+/figs
+/model_checkpoint*
+/__pychache__
