@@ -54,6 +54,7 @@ python test.py
 ```
   - model_path: path to the trained model
   - plot: whether to show prediction plots during execution, if False, prediction plots will only be saved to the 'figs' folder
+    
 Running this script will run evaluation, generate prediction plots and output calculated loss for the model under evaluation 
 
 
