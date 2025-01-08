@@ -42,9 +42,9 @@ python training.py
   -- model_path path_to_your_model
   -- start_epoch epoch
 ```
-    - model_path: where to save your model
-    - start_epoch: if passed > 0 it will load saved model from your path and restart training from the provided epoch,
-                  training pipeline uses scheduled sampling<sup>[[4]](https://doi.org/10.48550/arXiv.1506.03099)</sup> which is dependent on the epoch 
+  - model_path: where to save your model
+  - start_epoch: if passed > 0 it will load saved model from your path and restart training from the provided epoch,
+  training pipeline uses scheduled sampling<sup>[[4]](https://doi.org/10.48550/arXiv.1506.03099)</sup> which is dependent on the epoch 
 
 
 
