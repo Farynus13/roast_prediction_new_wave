@@ -44,7 +44,17 @@ python training.py
 ```
   - model_path: where to save your model
   - start_epoch: if passed > 0 it will load saved model from your path and restart training from the provided epoch,
-  training pipeline uses scheduled sampling<sup>[[4]](https://doi.org/10.48550/arXiv.1506.03099)</sup> which is dependent on the epoch 
+  training pipeline uses scheduled sampling<sup>[[4]](https://doi.org/10.48550/arXiv.1506.03099)</sup> which is dependent on the epoch
+### Testing
+1. To test run:
+```sh
+python test.py
+  -- model_path path_to_your_model
+  -- plot [True/False]
+```
+  - model_path: path to the trained model
+  - plot: whether to show prediction plots during execution, if False, prediction plots will only be saved to the 'figs' folder
+Running this script will run evaluation, generate prediction plots and output calculated loss for the model under evaluation 
 
 
 
