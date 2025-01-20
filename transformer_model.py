@@ -104,49 +104,6 @@ class GPTBlock(nn.Module):
         logits = self.fcn(logits)
         logits = self.ln2(logits + adn_logits)
         return logits
-
-
-class GPT(nn.Module):
-    def __init__(self, input_size,max_length, d_model, n_heads, n_layers):
-        super().__init__()
-        self.max_length = max_length
-        self.ie = nn.Embedding(input_size, d_model) # word token embeddings
-        self.pe = PositionalEncoding(max_length, d_model) # word position encodings
-        self.blocks = nn.ModuleList([GPTBlock(d_model, n_heads) for _ in  range(n_layers)])
-        self.linear1 = nn.Linear(d_model, input_dim)
-
-    def forward(self, inputs, targets = None):
-        logits = self.ie(inputs) # dim -> batch_size, sequence_length, d_model
-        logits = self.pe(logits)
-        for block in self.blocks:
-            logits = block(logits)
-        logits = self.linear1(logits)
-        loss = None
-        if targets != None:
-            batch_size, sequence_length, d_model = logits.shape
-            # obliczamy loss dla całego batcha
-            logits = logits.view(batch_size * sequence_length, d_model)
-            targets = targets.view(batch_size * sequence_length)
-            loss = F.cross_entropy(logits, targets)
-        return logits, loss
-
-    def generate(self, inputs, max_new_states):
-        # spowoduje to przechowywanie wyników modelu wraz z początkową sekwencją wejściową
-        # wykonujemy kopię, aby nie kolidowała z modelem
-        output = inputs.clone()
-        for _ in range(max_new_states):
-            current_seq_length = inputs.size(1)
-            # Skracamy input jeśli przekracza max_length
-            if current_seq_length > self.max_length:
-                inputs = inputs[:, -self.max_length:]
-
-            logits, _ = self(inputs)
-            logits = logits[:, -1, :]
-            
-
-            inputs = torch.cat([inputs, logits], dim=1)
-            output = torch.cat([output, logits], dim=1)
-        return output
     
 class CoffeeRoasterModel(nn.Module):
     def __init__(self, input_dim, d_model, nhead, num_layers, output_dim,max_length=800,device='cpu'):
