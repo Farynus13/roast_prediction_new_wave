@@ -219,18 +219,20 @@ class DataLoader:
         y = torch.tensor(y, dtype=torch.float32).unsqueeze(0)
         return x, y
 
-def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, num_epochs=20,device='cpu'):
+def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, num_epochs=20,device='cpu',batch_size=16):
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
         batches = np.arange(len(train_dataloader))
-        for _ in tqdm(batches, desc=f"Epoch {epoch + 1}", total=len(train_dataloader)):
+        optimizer.zero_grad(set_to_none=True)
+        for i in tqdm(batches, desc=f"Epoch {epoch + 1}", total=len(train_dataloader)):
             xb, yb = train_dataloader.get_batch()
             logits, loss = model(xb, yb)
-            optimizer.zero_grad(set_to_none=True)
             loss.backward()
-            optimizer.step()
             total_loss += loss.item()
+            if (i + 1) % batch_size == 0 or (i + 1) == len(train_dataloader):
+                optimizer.step()
+                optimizer.zero_grad(set_to_none=True)
         total_val_loss = 0
         model.eval()
         with torch.no_grad():
