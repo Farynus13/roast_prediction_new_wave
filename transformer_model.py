@@ -149,9 +149,9 @@ class GPT(nn.Module):
         return output
     
 class CoffeeRoasterModel(nn.Module):
-    def __init__(self, input_dim, d_model, nhead, num_layers, output_dim,max_length=800):
+    def __init__(self, input_dim, d_model, nhead, num_layers, output_dim,max_length=800,device='cpu'):
         super(CoffeeRoasterModel, self).__init__()
-        
+        self.device = device
         self.d_model = d_model
         self.nhead = nhead
         self.num_layers = num_layers
@@ -182,7 +182,7 @@ class CoffeeRoasterModel(nn.Module):
         with torch.no_grad():
             # empty tensor to store new states
             batch_size, _, _ = src.shape
-            output = torch.zeros(batch_size, 0, self.input_dim)
+            output = torch.zeros(batch_size, 0, self.input_dim, device=self.device)
             assert exogenous.size(1) + src.size(1) <= self.max_length, "Exogenous sequence too long"
             for i in tqdm(range(exogenous.size(1)), desc="Generating predictions", total=exogenous.size(1)):
                 logits, _ = self(src)
@@ -199,7 +199,7 @@ class CoffeeRoasterModel(nn.Module):
 
 # Dataset class
 class DataLoader:
-    def __init__(self, sequences):
+    def __init__(self, sequences,device='cpu'):
         self.sequences = sequences
         self.idx = 0
 
@@ -219,7 +219,7 @@ class DataLoader:
         y = torch.tensor(y, dtype=torch.float32).unsqueeze(0)
         return x, y
 
-def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, num_epochs=20):
+def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, num_epochs=20,device='cpu'):
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
@@ -255,16 +255,16 @@ def get_scaler(data, type='MinMaxScaler', save=True, path='scaler.joblib'):
     return scaler
 
 # Generate predictions
-def generate_prediction(model, sequences,scaler, start_idx=120, pred_len=120):
+def generate_prediction(model, sequences,scaler, start_idx=120, pred_len=120,device='cpu'):
     src = [seq[:start_idx] for seq in sequences]
-    src = torch.tensor(src, dtype=torch.float32)
+    src = torch.tensor(src, dtype=torch.float32, device=device)
     exogenous = [seq[start_idx:start_idx + pred_len, 2] for seq in sequences]
-    exogenous = torch.tensor(exogenous, dtype=torch.float32)
+    exogenous = torch.tensor(exogenous, dtype=torch.float32, device=device)
     exogenous = exogenous.unsqueeze(2)
     predictions = model.generate(src, exogenous)
     #get loss
     y_true = [seq[start_idx:start_idx + pred_len] for seq in sequences]
-    y_true = torch.tensor(y_true, dtype=torch.float32)
+    y_true = torch.tensor(y_true, dtype=torch.float32, device=device)
     y_pred = predictions.clone()
     loss = F.mse_loss(y_pred[:,:,:2], y_true[:,:,:2])
     y_pred_unscaled = y_pred.detach().numpy()
@@ -272,8 +272,8 @@ def generate_prediction(model, sequences,scaler, start_idx=120, pred_len=120):
     for i in range(len(y_pred_unscaled)):
         y_pred_unscaled[i] = scaler.inverse_transform(y_pred_unscaled[i])
         y_true_unscaled[i] = scaler.inverse_transform(y_true_unscaled[i])
-    y_pred = torch.tensor(y_pred_unscaled)
-    y_true = torch.tensor(y_true_unscaled)
+    y_pred = torch.tensor(y_pred_unscaled, device=device)
+    y_true = torch.tensor(y_true_unscaled, device=device)
     unscaled_loss = F.mse_loss(y_pred[:,:,:2], y_true[:,:,:2])
 
     return predictions.detach().numpy(), loss.item(), unscaled_loss.item()
@@ -316,6 +316,7 @@ def prepare_sequences(data, scaler):
 if __name__ == "__main__":
     # Load data
     path = 'data.npy'
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model_path = 'transformer_model.pth'
     data = np.load(path, allow_pickle=True)
     np.random.shuffle(data)
@@ -340,8 +341,8 @@ if __name__ == "__main__":
     learning_rate = 0.001
 
     # Prepare dataset and dataloader
-    train_dataset = DataLoader(train_sequences)
-    val_dataset = DataLoader(val_sequences)
+    train_dataset = DataLoader(train_sequences,device=device)
+    val_dataset = DataLoader(val_sequences,device=device)
 
     # Initialize model, loss, and optimizer
     model = CoffeeRoasterModel(
@@ -349,13 +350,14 @@ if __name__ == "__main__":
         d_model=64,
         nhead=4,
         num_layers=3,
-        output_dim=2  # Predicting bt, et
+        output_dim=2,  # Predicting bt, et
+        device=device
     )    
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # Train model
-    train_model(model, train_dataset,val_dataset, criterion, optimizer, num_epochs=num_epochs)
+    train_model(model, train_dataset,val_dataset, criterion, optimizer, num_epochs=num_epochs,device=device)
 
     # Save model
     torch.save(model.state_dict(), model_path)
@@ -367,11 +369,12 @@ if __name__ == "__main__":
         d_model=64,
         nhead=4,
         num_layers=3,
-        output_dim=2  # Predicting bt, et
+        output_dim=2,  # Predicting bt, et
+        device=device
     )
     model.load_state_dict(torch.load(model_path))
     # Generate predictions
-    predictions,loss,unscaled_loss = generate_prediction(model, val_sequences,scaler, start_idx=250, pred_len=120)
+    predictions,loss,unscaled_loss = generate_prediction(model, val_sequences,scaler, start_idx=250, pred_len=120,device=device)
     print(f"Loss: {loss}, Unscaled loss: {unscaled_loss}")
     print(f"Predictions shape: {len(predictions)}")
     # Plot predictions
