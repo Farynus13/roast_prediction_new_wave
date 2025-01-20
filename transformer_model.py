@@ -85,7 +85,7 @@ class PositionalEncoding(nn.Module):
 
 
 class GPTBlock(nn.Module):
-    def __init__(self, d_model, n_heads):
+    def __init__(self, d_model, n_heads): 
         super().__init__()
         self.att = MultiHeadAttention(d_model, n_heads)
         self.ln1 = nn.LayerNorm(d_model)
@@ -171,10 +171,10 @@ class DataLoader:
         self.idx = (self.idx + 1) % len(self.sequences)
         x = seq[:-1]  # All but the last time step
         y = seq[1:, :2]  # All but the first time step, only bt and et
-        # expand to a batch size of 1
-        x = torch.tensor(x, dtype=torch.float32).unsqueeze(0)
-        y = torch.tensor(y, dtype=torch.float32).unsqueeze(0)
+        x = torch.tensor(x, dtype=torch.float32, device=device).unsqueeze(0)
+        y = torch.tensor(y, dtype=torch.float32, device=device).unsqueeze(0)
         return x, y
+
 
 def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, num_epochs=20,device='cpu',batch_size=16):
     for epoch in range(num_epochs):
@@ -275,7 +275,7 @@ def prepare_sequences(data, scaler):
 if __name__ == "__main__":
     # Load data
     path = 'data.npy'
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model_path = 'transformer_model.pth'
     data = np.load(path, allow_pickle=True)
     np.random.shuffle(data)
@@ -304,14 +304,9 @@ if __name__ == "__main__":
     val_dataset = DataLoader(val_sequences,device=device)
 
     # Initialize model, loss, and optimizer
-    model = CoffeeRoasterModel(
-        input_dim=3,  # src includes bt, et, burner
-        d_model=64,
-        nhead=4,
-        num_layers=3,
-        output_dim=2,  # Predicting bt, et
-        device=device
-    )    
+    model = CoffeeRoasterModel(input_dim=3, d_model=64, nhead=8, num_layers=4, output_dim=3, device=device)
+    model.to(device)
+
     criterion = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
@@ -323,14 +318,8 @@ if __name__ == "__main__":
     print("Model saved")
 
     # Load model
-    model = CoffeeRoasterModel(
-        input_dim=3,  # src includes bt, et, burner
-        d_model=64,
-        nhead=4,
-        num_layers=3,
-        output_dim=2,  # Predicting bt, et
-        device=device
-    )
+    model = CoffeeRoasterModel(input_dim=3, d_model=64, nhead=8, num_layers=4, output_dim=3, device=device)
+    model.to(device)
     model.load_state_dict(torch.load(model_path))
     # Generate predictions
     predictions,loss,unscaled_loss = generate_prediction(model, val_sequences,scaler, start_idx=250, pred_len=120,device=device)
