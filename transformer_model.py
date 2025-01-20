@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 # Transformer-based model
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model: int, n_heads: int):
+    def __init__(self, d_model: int, n_heads: int, dropout: float = 0.2) -> None:
         super().__init__()
 
         self.n_heads = n_heads
@@ -25,7 +25,7 @@ class MultiHeadAttention(nn.Module):
         self.key = nn.Linear(d_model, d_model)
         self.value = nn.Linear(d_model, d_model)
         self.fc_out = nn.Linear(d_model, d_model)
-        self.dropout = nn.Dropout(0.2)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, inputs: torch.Tensor):
         B, seq_length, d_model = inputs.shape
@@ -85,12 +85,12 @@ class PositionalEncoding(nn.Module):
 
 
 class GPTBlock(nn.Module):
-    def __init__(self, d_model, n_heads): 
+    def __init__(self, d_model, n_heads, dropout=0.2):
         super().__init__()
-        self.att = MultiHeadAttention(d_model, n_heads)
+        self.att = MultiHeadAttention(d_model, n_heads, dropout)
         self.ln1 = nn.LayerNorm(d_model)
         self.ln2 = nn.LayerNorm(d_model)
-        self.dropout = nn.Dropout(0.2)
+        self.dropout = nn.Dropout(dropout)
         self.fcn = nn.Sequential(
             nn.Linear(d_model, 4 * d_model),
             nn.GELU(),
@@ -106,7 +106,7 @@ class GPTBlock(nn.Module):
         return logits
     
 class CoffeeRoasterModel(nn.Module):
-    def __init__(self, input_dim, d_model, nhead, num_layers, output_dim,max_length=800,device='cpu'):
+    def __init__(self, input_dim, d_model, nhead, num_layers, output_dim,max_length=800,device='cpu',dropout=0.2):
         super(CoffeeRoasterModel, self).__init__()
         self.device = device
         self.d_model = d_model
@@ -118,7 +118,7 @@ class CoffeeRoasterModel(nn.Module):
 
         self.embedding = nn.Linear(input_dim, d_model)
         self.positional_encoding = PositionalEncoding(max_length, d_model)  # Max length: 800
-        self.blocks = nn.ModuleList([GPTBlock(d_model, nhead) for _ in range(num_layers)])
+        self.blocks = nn.ModuleList([GPTBlock(d_model, nhead,dropout) for _ in range(num_layers)])
         self.fc = nn.Linear(d_model, output_dim)
     
     def forward(self, src, targets=None):
