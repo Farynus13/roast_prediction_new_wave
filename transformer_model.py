@@ -177,19 +177,18 @@ class DataLoader:
         return x, y
 
 
-def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, num_epochs=20,device='cpu',batch_size=16):
+def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, num_epochs=20,device='cpu'):
     for epoch in range(num_epochs):
         model.train()
         total_loss = 0
         batches = np.arange(len(train_dataloader))
-        optimizer.zero_grad(set_to_none=True)
-        for i in tqdm(batches, desc=f"Epoch {epoch + 1}", total=len(train_dataloader)):
+        for _ in tqdm(batches, desc=f"Epoch {epoch + 1}", total=len(train_dataloader)):
             xb, yb = train_dataloader.get_batch()
             logits, loss = model(xb, yb)
+            optimizer.zero_grad(set_to_none=True)
             loss.backward()
+            optimizer.step()
             total_loss += loss.item()
-            if (i + 1) % batch_size == 0 or (i + 1) == len(train_dataloader):
-                optimizer.step()
         total_val_loss = 0
         model.eval()
         with torch.no_grad():
@@ -295,7 +294,6 @@ if __name__ == "__main__":
     d_model = 64
     nhead = 4
     num_layers = 3
-    batch_size = 16
     num_epochs = 50
     learning_rate = 0.001
 
