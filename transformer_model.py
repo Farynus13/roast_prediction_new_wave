@@ -190,7 +190,6 @@ def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, n
             total_loss += loss.item()
             if (i + 1) % batch_size == 0 or (i + 1) == len(train_dataloader):
                 optimizer.step()
-                optimizer.zero_grad(set_to_none=True)
         total_val_loss = 0
         model.eval()
         with torch.no_grad():
@@ -305,7 +304,7 @@ if __name__ == "__main__":
     val_dataset = DataLoader(val_sequences,device=device)
 
     # Initialize model, loss, and optimizer
-    model = CoffeeRoasterModel(input_dim=3, d_model=64, nhead=8, num_layers=4, output_dim=3, device=device)
+    model = CoffeeRoasterModel(input_dim=3, d_model=64, nhead=8, num_layers=4, output_dim=2, device=device)
     model.to(device)
 
     criterion = nn.MSELoss()
@@ -319,7 +318,7 @@ if __name__ == "__main__":
     print("Model saved")
 
     # Load model
-    model = CoffeeRoasterModel(input_dim=3, d_model=64, nhead=8, num_layers=4, output_dim=3, device=device)
+    model = CoffeeRoasterModel(input_dim=3, d_model=64, nhead=8, num_layers=4, output_dim=2, device=device)
     model.to(device)
     model.load_state_dict(torch.load(model_path))
     # Generate predictions
