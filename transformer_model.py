@@ -226,8 +226,8 @@ def generate_prediction(model, sequences,scaler, start_idx=120, pred_len=120,dev
     y_true = torch.tensor(y_true, dtype=torch.float32, device=device)
     y_pred = predictions.clone()
     loss = F.mse_loss(y_pred[:,:,:2], y_true[:,:,:2])
-    y_pred_unscaled = y_pred.detach().numpy()
-    y_true_unscaled = y_true.detach().numpy()
+    y_pred_unscaled = y_pred.detach().cpu().numpy()
+    y_true_unscaled = y_true.detach().cpu().numpy()
     for i in range(len(y_pred_unscaled)):
         y_pred_unscaled[i] = scaler.inverse_transform(y_pred_unscaled[i])
         y_true_unscaled[i] = scaler.inverse_transform(y_true_unscaled[i])
