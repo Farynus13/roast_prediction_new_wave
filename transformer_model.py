@@ -159,6 +159,7 @@ class DataLoader:
     def __init__(self, sequences,device='cpu'):
         self.sequences = sequences
         self.idx = 0
+        self.device = device
 
     def __len__(self):
         return len(self.sequences)
@@ -171,8 +172,8 @@ class DataLoader:
         self.idx = (self.idx + 1) % len(self.sequences)
         x = seq[:-1]  # All but the last time step
         y = seq[1:, :2]  # All but the first time step, only bt and et
-        x = torch.tensor(x, dtype=torch.float32, device=device).unsqueeze(0)
-        y = torch.tensor(y, dtype=torch.float32, device=device).unsqueeze(0)
+        x = torch.tensor(x, dtype=torch.float32, device=self.device).unsqueeze(0)
+        y = torch.tensor(y, dtype=torch.float32, device=self.device).unsqueeze(0)
         return x, y
 
 
