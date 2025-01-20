@@ -235,7 +235,7 @@ def generate_prediction(model, sequences,scaler, start_idx=120, pred_len=120,dev
     y_true = torch.tensor(y_true_unscaled, device=device)
     unscaled_loss = F.mse_loss(y_pred[:,:,:2], y_true[:,:,:2])
 
-    return predictions.detach().numpy(), loss.item(), unscaled_loss.item()
+    return predictions.detach().cpu().numpy(), loss.item(), unscaled_loss.item()
 
 def plot_predictions(sequences,predictions,scaler, start_idx=120, pred_len=120):
     for i,(seq,pred) in enumerate(zip(sequences,predictions)):
