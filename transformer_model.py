@@ -11,7 +11,12 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
 
-# Transformer-based model
+import torch
+import torch.nn as nn
+import math
+import random
+
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, d_model: int, n_heads: int, dropout: float = 0.2) -> None:
         super().__init__()
@@ -19,7 +24,7 @@ class MultiHeadAttention(nn.Module):
         self.n_heads = n_heads
         self.head_dim = d_model // n_heads
 
-        assert (n_heads * self.head_dim == d_model)
+        assert n_heads * self.head_dim == d_model, "d_model must be divisible by n_heads."
 
         self.query = nn.Linear(d_model, d_model)
         self.key = nn.Linear(d_model, d_model)
@@ -27,33 +32,81 @@ class MultiHeadAttention(nn.Module):
         self.fc_out = nn.Linear(d_model, d_model)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, inputs: torch.Tensor):
+    def forward(self, inputs: torch.Tensor, p_sampling: float) -> torch.Tensor:
+        """
+        Forward pass with scheduled sampling for p_sampling > 0.
+        Falls back to the original implementation if p_sampling = 0.
+
+        Args:
+            inputs (torch.Tensor): Shape (B, seq_length, d_model).
+            p_sampling (float): Probability of using the predicted output instead of ground truth.
+
+        Returns:
+            torch.Tensor: The output tensor after the attention mechanism.
+        """
         B, seq_length, d_model = inputs.shape
 
-        # Projekcja embedowanych wartości na Q, K oraz V
+        # Check if p_sampling is 0 to use the original forward method
+        if p_sampling == 0:
+            # Parallel attention computation for the entire sequence
+            Q = self.query(inputs).view(B, seq_length, self.n_heads, self.head_dim).permute(0, 2, 1, 3)
+            K = self.key(inputs).view(B, seq_length, self.n_heads, self.head_dim).permute(0, 2, 1, 3)
+            V = self.value(inputs).view(B, seq_length, self.n_heads, self.head_dim).permute(0, 2, 1, 3)
+
+            attention_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.head_dim)
+
+            # Masking for causal attention
+            mask = torch.triu(torch.ones(seq_length, seq_length), diagonal=1).bool().to(inputs.device)
+            attention_scores = attention_scores.masked_fill(mask, float('-inf'))
+
+            attention_weights = torch.softmax(attention_scores, dim=-1)
+            attention_output = torch.matmul(self.dropout(attention_weights), V)
+
+            # Combine heads and reshape back to the original dimension
+            attention_output = attention_output.permute(0, 2, 1, 3).contiguous()
+            attention_output = attention_output.view(B, seq_length, d_model)
+
+            return self.fc_out(attention_output)
+
+        # Scheduled sampling (p_sampling > 0)
         Q = self.query(inputs).view(B, seq_length, self.n_heads, self.head_dim).permute(0, 2, 1, 3)
         K = self.key(inputs).view(B, seq_length, self.n_heads, self.head_dim).permute(0, 2, 1, 3)
         V = self.value(inputs).view(B, seq_length, self.n_heads, self.head_dim).permute(0, 2, 1, 3)
 
-        # obliczamy wyniki atencji
-        attention_scores = torch.matmul(Q, K.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        # Initialize outputs
+        outputs = []
+        context = torch.zeros_like(inputs[:, 0, :])  # (B, d_model)
 
-        # maskujemy by zapobiec podglądaniu przyszłych tokenów
-        mask = torch.triu(torch.ones(seq_length, seq_length), diagonal=1).bool().to(inputs.device)
-        attention_scores = attention_scores.masked_fill(mask, float('-inf'))
+        for t in range(seq_length):
+            # Compute attention scores for the current step
+            current_Q = Q[:, :, t:t + 1, :]  # (B, n_heads, 1, head_dim)
+            scores = torch.matmul(current_Q, K.transpose(-2, -1)) / math.sqrt(self.head_dim)
 
-        attention_weights = torch.softmax(attention_scores, dim=-1)
-        # obliczamy sumę ważoną
-        attention_output = torch.matmul(self.dropout(attention_weights), V)
+            # Apply masking to prevent peeking into future tokens
+            mask = torch.triu(torch.ones(seq_length, seq_length), diagonal=1).bool().to(inputs.device)
+            scores = scores.masked_fill(mask[:, t:t + 1], float('-inf'))
 
-        # łączymy wyniki z wszystkich głowic i układamy je do oryginalnego kształtu
-        attention_output = attention_output.permute(0, 2, 1, 3).contiguous()
-        attention_output = attention_output.view(B, seq_length, d_model)
+            # Compute attention weights and output
+            attention_weights = torch.softmax(scores, dim=-1)  # (B, n_heads, 1, seq_length)
+            weighted_context = torch.matmul(attention_weights, V)  # (B, n_heads, 1, head_dim)
 
-        # ostateczna transformacja liniowa
-        out = self.fc_out(attention_output)
+            # Reshape and transform back to the original dimension
+            weighted_context = weighted_context.permute(0, 2, 1, 3).contiguous().view(B, 1, d_model)
+            predicted_output = self.fc_out(weighted_context)[:, 0, :]  # (B, d_model)
 
-        return out
+            # Scheduled sampling
+            if t == 0 or random.random() < p_sampling:
+                context = predicted_output
+            else:
+                context = inputs[:, t, :]  # Use ground truth
+
+            outputs.append(context.unsqueeze(1))
+
+        # Concatenate outputs across the sequence
+        outputs = torch.cat(outputs, dim=1)  # (B, seq_length, d_model)
+
+        return outputs
+
 
 
 
@@ -97,8 +150,8 @@ class GPTBlock(nn.Module):
             nn.Linear(4 * d_model, d_model)
         )
 
-    def forward(self, logits):
-        att_logits = self.att(logits)
+    def forward(self, logits, p_sampling=0.0):
+        att_logits = self.att(logits,p_sampling)
         adn_logits = self.ln1(logits + att_logits)
         logits = self.dropout(adn_logits)
         logits = self.fcn(logits)
@@ -121,11 +174,11 @@ class CoffeeRoasterModel(nn.Module):
         self.blocks = nn.ModuleList([GPTBlock(d_model, nhead,dropout) for _ in range(num_layers)])
         self.fc = nn.Linear(d_model, output_dim)
     
-    def forward(self, src, targets=None):
+    def forward(self, src, targets=None,p_sampling=0.0):
         logits = self.embedding(src)
         logits = self.positional_encoding(logits)
         for block in self.blocks:
-            logits = block(logits)
+            logits = block(logits, p_sampling)
         logits = self.fc(logits)
         loss = None
         if targets is not None:
