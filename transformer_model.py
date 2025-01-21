@@ -100,7 +100,7 @@ class MultiHeadAttention(nn.Module):
             outputs.append(attention_output)
 
             # Scheduled sampling
-            context = torch.where(torch.rand(B, 1) < p_sampling, attention_output.squeeze(1), context)
+            context = torch.where(torch.rand(B, 1).to(inputs.device) < p_sampling, attention_output.squeeze(1), context)
 
         # Concatenate outputs across the sequence
         outputs = torch.cat(outputs, dim=1)  # (B, seq_length, d_model)
