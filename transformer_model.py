@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import math
-import random
 
 
 class MultiHeadAttention(nn.Module):
@@ -174,19 +173,20 @@ class CoffeeRoasterModel(nn.Module):
         self.blocks = nn.ModuleList([GPTBlock(d_model, nhead,dropout) for _ in range(num_layers)])
         self.fc = nn.Linear(d_model, output_dim)
     
-    def forward(self, src, targets=None,p_sampling=0.0):
+    def forward(self, src, targets=None,masks=None,p_sampling=0.0):
         logits = self.embedding(src)
         logits = self.positional_encoding(logits)
         for block in self.blocks:
             logits = block(logits, p_sampling)
         logits = self.fc(logits)
         loss = None
-        if targets is not None:
+        if targets is not None and masks is not None:
             batch_size, sequence_length, d_model = logits.shape
             logits = logits.view(batch_size * sequence_length, d_model)
             targets = targets.view(batch_size * sequence_length, self.output_dim)
-            loss = F.mse_loss(logits, targets)
-        return logits, loss
+            masks = masks.view(batch_size * sequence_length)
+            loss = F.mse_loss(logits[masks.bool()], targets[masks.bool()])
+        return logits.view(batch_size, sequence_length, d_model), loss
     
     def generate(self, src, exogenous):
         with torch.no_grad():
@@ -205,29 +205,58 @@ class CoffeeRoasterModel(nn.Module):
         return output
             
 
-
-
-# Dataset class
 class DataLoader:
-    def __init__(self, sequences,device='cpu'):
+    def __init__(self, sequences, batch_size=1, device='cpu'):
         self.sequences = sequences
-        self.idx = 0
+        self.batch_size = batch_size
         self.device = device
+        self.indices = np.arange(len(sequences))
+        np.random.shuffle(self.indices)
+        self.idx = 0
 
     def __len__(self):
-        return len(self.sequences)
+        return len(self.sequences) // self.batch_size
     
     def reset(self):
         self.idx = 0
+        np.random.shuffle(self.indices)
 
     def get_batch(self):
-        seq = self.sequences[self.idx]
-        self.idx = (self.idx + 1) % len(self.sequences)
-        x = seq[:-1]  # All but the last time step
-        y = seq[1:, :2]  # All but the first time step, only bt and et
-        x = torch.tensor(x, dtype=torch.float32, device=self.device).unsqueeze(0)
-        y = torch.tensor(y, dtype=torch.float32, device=self.device).unsqueeze(0)
-        return x, y
+        if self.idx + self.batch_size > len(self.sequences):
+            self.reset()
+        
+        batch_indices = self.indices[self.idx:self.idx + self.batch_size]
+        batch_sequences = [self.sequences[i] for i in batch_indices]
+        self.idx += self.batch_size
+
+        # Find the maximum sequence length in the batch
+        max_len = max(len(seq) for seq in batch_sequences)
+
+        x_batch = []
+        y_batch = []
+        mask_batch = []
+
+        for seq in batch_sequences:
+            x = seq[:-1]  # All but the last time step
+            y = seq[1:, :2]  # All but the first time step, only bt and et
+
+            # Pad sequences to the maximum length
+            x_padded = np.pad(x, ((0, max_len - len(x)), (0, 0)), mode='constant', constant_values=0)
+            y_padded = np.pad(y, ((0, max_len - len(y)), (0, 0)), mode='constant', constant_values=0)
+
+            # Create mask for the sequence
+            mask = np.zeros((max_len,), dtype=np.float32)
+            mask[:len(x)] = 1
+
+            x_batch.append(x_padded)
+            y_batch.append(y_padded)
+            mask_batch.append(mask)
+
+        x_batch = torch.tensor(x_batch, dtype=torch.float32, device=self.device)
+        y_batch = torch.tensor(y_batch, dtype=torch.float32, device=self.device)
+        mask_batch = torch.tensor(mask_batch, dtype=torch.float32, device=self.device)
+
+        return x_batch, y_batch, mask_batch
 
 
 def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, num_epochs=20,device='cpu'):
@@ -239,8 +268,8 @@ def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, n
         total_loss = 0
         batches = np.arange(len(train_dataloader))
         for _ in tqdm(batches, desc=f"Epoch {epoch + 1}", total=len(train_dataloader)):
-            xb, yb = train_dataloader.get_batch()
-            logits, loss = model(xb, yb,p_sampling)
+            xb, yb,mb= train_dataloader.get_batch()
+            logits, loss = model(xb, yb,mb,p_sampling)
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
@@ -354,7 +383,7 @@ if __name__ == "__main__":
     learning_rate = 0.001
 
     # Prepare dataset and dataloader
-    train_dataset = DataLoader(train_sequences,device=device)
+    train_dataset = DataLoader(train_sequences,device=device, batch_size=6)
     val_dataset = DataLoader(val_sequences,device=device)
 
     # Initialize model, loss, and optimizer
