@@ -278,8 +278,8 @@ def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, n
         model.eval()
         with torch.no_grad():
             for _ in tqdm(range(len(val_dataloader)), desc=f"Val Epoch {epoch + 1}", total=len(val_dataloader)):
-                xb, yb = val_dataloader.get_batch()
-                logits, loss = model(xb, yb)
+                xb, yb,mb = val_dataloader.get_batch()
+                logits, loss = model(xb, yb,mb)
                 total_val_loss += loss.item()
         print(f"Epoch {epoch + 1}, Loss: {total_loss / len(train_dataloader)}, Val Loss: {total_val_loss / len(val_dataloader)}")
 
@@ -362,6 +362,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model_path = 'transformer_model.pth'
     data = np.load(path, allow_pickle=True)
+    data = data[:100]
     np.random.shuffle(data)
     print(f"Data shape: {data.shape}")
 
