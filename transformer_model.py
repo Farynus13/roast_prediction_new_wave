@@ -78,29 +78,29 @@ class MultiHeadAttention(nn.Module):
         context = torch.zeros_like(inputs[:, 0, :])  # (B, d_model)
 
         for t in range(seq_length):
-            # Compute attention scores for the current step
-            current_Q = Q[:, :, t:t + 1, :]  # (B, n_heads, 1, head_dim)
-            scores = torch.matmul(current_Q, K.transpose(-2, -1)) / math.sqrt(self.head_dim)
+            # Compute attention scores
+            q = Q[:, :, t, :].unsqueeze(2)
+            k = K[:, :, :t+1, :]
+            v = V[:, :, :t+1, :]
+            attention_scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.head_dim)
 
-            # Apply masking to prevent peeking into future tokens
-            mask = torch.triu(torch.ones(seq_length, seq_length), diagonal=1).bool().to(inputs.device)
-            scores = scores.masked_fill(mask[:, t:t + 1], float('-inf'))
+            # Masking for causal attention
+            mask = torch.triu(torch.ones(1, t+1), diagonal=1).bool().to(inputs.device)
+            attention_scores = attention_scores.masked_fill(mask, float('-inf'))
 
-            # Compute attention weights and output
-            attention_weights = torch.softmax(scores, dim=-1)  # (B, n_heads, 1, seq_length)
-            weighted_context = torch.matmul(attention_weights, V)  # (B, n_heads, 1, head_dim)
+            attention_weights = torch.softmax(attention_scores, dim=-1)
+            attention_output = torch.matmul(self.dropout(attention_weights), v)
 
-            # Reshape and transform back to the original dimension
-            weighted_context = weighted_context.permute(0, 2, 1, 3).contiguous().view(B, 1, d_model)
-            predicted_output = self.fc_out(weighted_context)[:, 0, :]  # (B, d_model)
+            # Combine heads and reshape back to the original dimension
+            attention_output = attention_output.permute(0, 2, 1, 3).contiguous()
+            attention_output = attention_output.view(B, 1, self.n_heads * self.head_dim)
+
+            # Apply dropout and linear layer
+            attention_output = self.fc_out(attention_output)
+            outputs.append(attention_output)
 
             # Scheduled sampling
-            if t == 0 or random.random() < p_sampling:
-                context = predicted_output
-            else:
-                context = inputs[:, t, :]  # Use ground truth
-
-            outputs.append(context.unsqueeze(1))
+            context = torch.where(torch.rand(B, 1) < p_sampling, attention_output.squeeze(1), context)
 
         # Concatenate outputs across the sequence
         outputs = torch.cat(outputs, dim=1)  # (B, seq_length, d_model)
