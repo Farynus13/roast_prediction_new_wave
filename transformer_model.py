@@ -231,13 +231,16 @@ class DataLoader:
 
 
 def train_model(model, train_dataloader, val_dataloader, criterion, optimizer, num_epochs=20,device='cpu'):
+    k = 100
+
     for epoch in range(num_epochs):
+        p_sampling = (k / (k + np.exp(epoch/num_epochs*1000 / k)))
         model.train()
         total_loss = 0
         batches = np.arange(len(train_dataloader))
         for _ in tqdm(batches, desc=f"Epoch {epoch + 1}", total=len(train_dataloader)):
             xb, yb = train_dataloader.get_batch()
-            logits, loss = model(xb, yb)
+            logits, loss = model(xb, yb,p_sampling)
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
