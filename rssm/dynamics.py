@@ -19,6 +19,7 @@ class DynamicsModel(nn.Module):
         self.project_hidden_obs = nn.Linear(hidden_dim + embedding_dim, hidden_dim)
 
         self.state_dim = state_dim
+        self.embedding_dim = embedding_dim
 
         self.act_fn = nn.ReLU()
 
@@ -53,7 +54,7 @@ class DynamicsModel(nn.Module):
             state_t = posterior_states_list[-1][:, 0, :] if obs is not None else prior_states_list[-1][:, 0, :]
             state_t = state_t if dones is None else state_t * (1 - dones[:, t, :])
             hidden_t = hiddens_list[-1][:, 0, :]
-
+            
             state_action = torch.cat([state_t, action_t], dim=-1)
             state_action = self.act_fn(self.project_state_action(state_action))
 

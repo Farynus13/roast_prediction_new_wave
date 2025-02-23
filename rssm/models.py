@@ -8,10 +8,13 @@ class EncoderMLP(nn.Module):
         self.fc2 = nn.Linear(embedding_dim//4, embedding_dim//2)
         self.fc3 = nn.Linear(embedding_dim//2, embedding_dim)
 
+        self.bn1 = nn.BatchNorm1d(embedding_dim//4)
+        self.bn2 = nn.BatchNorm1d(embedding_dim//2)
+
     def forward(self, x):
-        x = torch.flatten(x, start_dim=1)  # Flatten input
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
+        # x = torch.flatten(x, start_dim=1)  # Flatten input
+        x = torch.relu(self.bn1(self.fc1(x)))
+        x = torch.relu(self.bn2(self.fc2(x)))
         x = self.fc3(x)  # No activation on the last layer
         return x
 
@@ -23,14 +26,16 @@ class DecoderMLP(nn.Module):
         self.fc2 = nn.Linear(embedding_size, embedding_size//2) 
         self.fc3 = nn.Linear(embedding_size//2, embedding_size//4)
         self.fc4 = nn.Linear(embedding_size//4, output_dim)
-        
-    
+
+        self.bn1 = nn.BatchNorm1d(embedding_size)
+        self.bn2 = nn.BatchNorm1d(embedding_size//2)
+        self.bn3 = nn.BatchNorm1d(embedding_size//4)
 
     def forward(self, h: torch.Tensor, s: torch.Tensor):
         x = torch.cat([h, s], dim=-1)
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = torch.relu(self.fc3(x))
+        x = torch.relu(self.bn1(self.fc1(x)))
+        x = torch.relu(self.bn2(self.fc2(x)))
+        x = torch.relu(self.bn3(self.fc3(x)))
         x = self.fc4(x)  # No activation to allow flexibility in output
         return x
     
