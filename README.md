@@ -3,18 +3,26 @@
 This project aims to develop a neural network model for inline time-series prediction of the coffee roasting curve, laying the foundation for an automated coffee roasting tool. The goal is to move beyond the conventional PID control, which only minimizes the difference from a set value, toward a system that simulates the decision-making process of a skilled human operator.
 
 ### Project Overview
-By predicting the coffee roasting curve the model enables more precise control of burner output, targeting an optimal roast profile. Traditional methods for coffee roasting system modelling<sup>[[1]](https://doi.org/10.1016/j.rineng.2024.102575)</sup> fail to provide satisfactory results due to non-stationarity, non-linearity, and partial observability of the system dynamics (different coffees respond differently to the burner output, also temperature readings are only an approximation of the real state of the system). By utilizing data-driven approach, where we use historical data of coffee roasting to train the RNN model we can achieve higher accuracy in predicting the systems behaviour, thus allowing us to produce higher quality roast.
+By predicting the coffee roasting curve the model enables more precise control of burner output, targeting an optimal roast profile. Traditional methods for coffee roasting system modelling<sup>[[1]](https://doi.org/10.1016/j.rineng.2024.102575)</sup> fail to provide satisfactory results due to non-stationarity, non-linearity, and partial observability of the system dynamics (different coffees respond differently to the burner output, also temperature readings are only an approximation of the real state of the system). By utilizing data-driven approach, where we use historical data of coffee roasting to train the several timeseries models (LSTM,RSSM,Transformer) we can achieve higher accuracy in predicting the systems behaviour, thus allowing us to produce higher quality roast.
 
 
-![Figure 1: Coffee Roasting Curve Prediction](/media/roast_prediction.gif)
+![Figure 1: Coffee Roasting Curve Prediction using LSTM with Attention](/media/roast_prediction.gif)
 
 *In black dashed lines we can observe the model's output given as an input last n seconds of the temperature curves along the burner changes.
 We can see an almost perfect fit to the real roast curve's ET and BT. Thanks to the added Attention Mechanisms model focuses strongly on the changes made in the burner value, which is especially visible in the ET curve*
 
+![Figure 2: Coffee Roasting Curve Simulation using RSSM (Recurrent State Space Model)](/media/roast_rssm.gif)
+
+*In orange we can see burner % setting over time. Blue curves depict both Bean Temperature over time (BT) and it's RoR (rate of rise). In red we can observe Environment temperature (ET - hot air outgoing from the roaster). All bold curves are ground truth curves from a recorded roast, while lighter curves are simulated curves via the RSSM. Gif depicts how both simulated BT and ET react to changed burner input % over the whole roast.
+
 ### Model Description
-Current version of model utilizes LSTM <sup>[[2]](https://doi.org/10.1162/neco.1997.9.8.1735)</sup> network with Masked Attention Mechanism<sup>[[3]](https://doi.org/10.48550/arXiv.1706.03762)</sup> running in the autoregressive mode. As an input model takes timeseries data consisting of two temperature curves (Bean Temperature - BT, and Environment Temperature - ET) along with timeseries of burner value accross the roasting process. During Inference Time, burner value is used as exogenous input which we can modulate in order to simulate system dynamics (response of temperature curves on the burner settings)
+First version of model utilizes LSTM <sup>[[2]](https://doi.org/10.1162/neco.1997.9.8.1735)</sup> network with Masked Attention Mechanism<sup>[[3]](https://doi.org/10.48550/arXiv.1706.03762)</sup> running in the autoregressive mode. As an input model takes timeseries data consisting of two temperature curves (Bean Temperature - BT, and Environment Temperature - ET) along with timeseries of burner value accross the roasting process. During Inference Time, burner value is used as exogenous input which we can modulate in order to simulate system dynamics (response of temperature curves on the burner settings)
 
+![RNN](media/RNN.png)
 
+Second version of the model utilizes RSSM <sup>[[4]](https://doi.org/10.48550/arXiv.1811.04551)</sup> which learns a latent representation of the system dynamics by modeling both deterministic and stochastic state transitions. Unlike the LSTM-based approach, RSSM enables more structured temporal reasoning by maintaining a compact latent state, improving generalization across different roasting conditions. The model receives the same timeseries inputs—BT, ET, and burner settings—but processes them within a learned latent space, allowing for more stable long-term predictions. During inference, the burner setting remains an exogenous input, enabling flexible simulation of temperature responses under different control strategies.
+
+![RSSM](media/RSSM.png)
 ### Objectives
 Accurate Prediction of Roasting Curve
 
@@ -44,7 +52,7 @@ python training.py
 ```
   - model_path: where to save your model
   - start_epoch: if passed > 0 it will load saved model from your path and restart training from the provided epoch,
-  training pipeline uses scheduled sampling<sup>[[4]](https://doi.org/10.48550/arXiv.1506.03099)</sup> which is dependent on the epoch
+  training pipeline uses scheduled sampling<sup>[[5]](https://doi.org/10.48550/arXiv.1506.03099)</sup> which is dependent on the epoch
 ### Testing
 1. To test run:
 ```sh
@@ -73,4 +81,6 @@ Refinement of Prediction Model: Fine-tune the model's predictive capabilities wi
 
 [[3] Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., Kaiser, L., et al. (2017). Attention is all you need. Advances in Neural Information Processing Systems, 5998-6008.](https://doi.org/10.48550/arXiv.1706.03762)
 
-[[4] Samy Bengio, Oriol Vinyals, Navdeep Jaitly, Noam Shazeer (2015). Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks](https://doi.org/10.48550/arXiv.1506.03099)
+[[4] Hafner, D., Lillicrap, T., Ba, J., & Norouzi, M. (2019). "Learning Latent Dynamics for Planning from Pixels."](https://doi.org/10.48550/arXiv.1706.03762)
+
+[[5] Samy Bengio, Oriol Vinyals, Navdeep Jaitly, Noam Shazeer (2015). Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks](https://doi.org/10.48550/arXiv.1506.03099)
