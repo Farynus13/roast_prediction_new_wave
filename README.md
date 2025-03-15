@@ -32,6 +32,9 @@ Unlike the LSTM-based approach, RSSM enables more structured temporal reasoning 
 
 *In orange we can see burner % setting over time. Blue curves depict both Bean Temperature over time (BT) and it's RoR (rate of rise). In red we can observe Environment temperature (ET - hot air outgoing from the roaster). All bold curves are ground truth curves from a recorded roast, while lighter curves are simulated curves via the RSSM. Gif depicts how both simulated BT and ET react to changed burner input % over the whole roast.
 
+#### Training data
+![Figure 3: Training data](/media/data.png)
+
 ### Objectives
 Accurate Prediction of Roasting Curve
 
