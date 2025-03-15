@@ -283,8 +283,8 @@ class Trainer:
 
 
 if __name__ == "__main__":
-    hidden_size = 256
-    embedding_dim = 256
+    hidden_size = 128
+    embedding_dim = 128
     state_dim = 128
     action_dim = 1
     device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -316,4 +316,4 @@ if __name__ == "__main__":
     train_dataset = RoastDataset(train_data, device)
     val_dataset = RoastDataset(val_data, device)
     trainer = Trainerv2(rssm, train_dataset, val_dataset, optimizer=optimizer, device=device)
-    trainer.train(2000,16,"rssm_v2.pth")
+    trainer.train(2000,4,"rssm_v2.pth")

@@ -12,3 +12,7 @@
 /model_checkpoint*
 /__pychache__
 /models
+*.pyc
+*.pyo
+**/**/__pycache__/
+runs/
